@@ -1,0 +1,59 @@
+name: Build Banners Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this plugin repo
+        uses: actions/checkout@v3
+        with:
+          path: plugins/Banners   # <-- folder name MUST match the plugin class name
+
+      - name: Checkout Aliucord
+        uses: actions/checkout@v3
+        with:
+          repository: Aliucord/Aliucord
+          path: Aliucord
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+
+      - name: Move plugin into Aliucord plugins folder
+        run: |
+          mkdir -p Aliucord/plugins
+          cp -r plugins/Banners Aliucord/plugins/Banners
+
+      - name: Grant Gradle execute permission
+        run: chmod +x Aliucord/gradlew
+
+      - name: Build
+        run: |
+          cd Aliucord
+          ./gradlew :plugins:Banners:make
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Banners
+          path: Aliucord/plugins/Banners/build/Banners.zip
+          if-no-files-found: error
